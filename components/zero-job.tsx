@@ -97,6 +97,11 @@ export function ZeroJob({ networkKey, query, amount, crew }: {
   const crewTotal = split.crewTotal;
   const remaining = jobTotal - payNow;
 
+  // The split drawn as a proportion of what is being paid now, so the bar can
+  // never disagree with the numbers beside it. Integer maths, like the money.
+  const crewPct = payNow > 0n ? Number((crewTotal * 100n) / payNow) : 0;
+  const staysPct = payNow > 0n ? Number((split.retained * 100n) / payNow) : 0;
+
   /**
    * The wallet is connected but would not give the page a signer for this
    * network. This is a real failure, not the network switch merely being a
@@ -223,9 +228,17 @@ export function ZeroJob({ networkKey, query, amount, crew }: {
 
       <Card edge="none" className="bg-white/95">
         <Label>Job</Label>
-        <h1 className="pt-1 text-2xl font-bold text-ink">${formatUsdFixed(jobTotal)}</h1>
-        <p className="pt-1 text-sm text-muted">
-          {crew.length} crew {crew.length === 1 ? "wallet" : "wallets"} · {config.label} · paid in {config.pathUsdSymbol}
+        <div className="flex items-end justify-between gap-3 pt-1">
+          <h1 className="tabular text-[2.1rem] font-black leading-none tracking-tight text-ink">
+            ${formatUsdFixed(jobTotal)}
+          </h1>
+          <span className="shrink-0 rounded-full bg-crew-soft px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-crew">
+            {crew.length} {crew.length === 1 ? "wallet" : "wallets"}
+          </span>
+        </div>
+        <div className="mt-3 h-1 w-14 rounded-full bg-gradient-to-r from-brand-from to-brand-to" />
+        <p className="pt-2 text-sm text-muted">
+          {config.label} · paid in {config.pathUsdSymbol}
         </p>
       </Card>
 
@@ -271,11 +284,20 @@ export function ZeroJob({ networkKey, query, amount, crew }: {
           <span className="text-sm text-muted">% of the job</span>
         </div>
 
-        <div className="pt-3">
+        <div className="grid grid-cols-2 gap-2 pt-3">
+          <div className="rounded-2xl bg-crew-soft px-3 py-2.5 ring-1 ring-crew/10">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-crew/70">You pay now</p>
+            <p className="tabular pt-1 text-2xl font-black leading-none text-crew">${formatUsdFixed(payNow)}</p>
+          </div>
+          <div className="rounded-2xl bg-[#f5f7fc] px-3 py-2.5 ring-1 ring-black/[0.03]">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Left on the job</p>
+            <p className="tabular pt-1 text-2xl font-black leading-none text-ink">${formatUsdFixed(remaining)}</p>
+          </div>
+        </div>
+
+        <div className="pt-2">
           <Row label="Job total">${formatUsdFixed(jobTotal)}</Row>
           <Row label="Pay now">{chosen.ok ? percentLabel(chosen.bps) : "—"}</Row>
-          <Row label="You pay">${formatUsdFixed(payNow)}</Row>
-          <Row label="Remaining on this job">${formatUsdFixed(remaining)}</Row>
         </div>
 
         {amountError ? (
@@ -291,20 +313,48 @@ export function ZeroJob({ networkKey, query, amount, crew }: {
           90% of what you pay now is split by these percentages, in the same transaction that takes your{" "}
           {config.pathUsdSymbol}.
         </p>
-        <div className="divide-y divide-line pt-2">
+        <div className="space-y-2 pt-3">
           {crew.map((member, index) => (
-            <div key={`${member.address}-${index}`} className="flex items-center justify-between gap-3 py-2.5">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-ink">{member.address}</p>
-                <p className="text-xs text-muted">{(member.bps / 100).toFixed(2)}%</p>
+            <div
+              key={`${member.address}-${index}`}
+              className="flex items-center justify-between gap-3 rounded-2xl bg-[#f7f9ff] px-3 py-2.5 ring-1 ring-crew/[0.07]"
+            >
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-from to-crew text-[11px] font-bold text-white">
+                  {index + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">{member.address}</p>
+                  <p className="text-xs text-muted">{(member.bps / 100).toFixed(2)}% of the crew share</p>
+                </div>
               </div>
-              <span className="tabular shrink-0 font-semibold text-crew">${formatUsdFixed(split.amounts[index])}</span>
+              <span className="tabular shrink-0 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-crew shadow-sm ring-1 ring-crew/10">
+                ${formatUsdFixed(split.amounts[index])}
+              </span>
             </div>
           ))}
         </div>
-        <div className="pt-2">
-          <Row label="To the crew, now">${formatUsdFixed(split.crewTotal)}</Row>
-          <Row label="Stays with you">${formatUsdFixed(split.retained)}</Row>
+
+        <div className="pt-3">
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-line">
+            <div className="h-full bg-gradient-to-r from-crew to-crew-bright" style={{ width: `${crewPct}%` }} />
+            <div className="h-full bg-holdback/45" style={{ width: `${staysPct}%` }} />
+          </div>
+          <div className="flex justify-between pt-1.5 text-[11px] font-bold">
+            <span className="text-crew">To the crew {crewPct}%</span>
+            <span className="text-holdback">Stays with you {staysPct}%</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 pt-3">
+          <div className="rounded-2xl bg-crew-soft px-3 py-2.5 ring-1 ring-crew/10">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-crew/70">To the crew</p>
+            <p className="tabular pt-1 text-lg font-black leading-none text-crew">${formatUsdFixed(crewTotal)}</p>
+          </div>
+          <div className="rounded-2xl bg-holdback-soft px-3 py-2.5 ring-1 ring-holdback/10">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-holdback/70">Stays with you</p>
+            <p className="tabular pt-1 text-lg font-black leading-none text-holdback">${formatUsdFixed(split.retained)}</p>
+          </div>
         </div>
       </Card>
 
@@ -330,7 +380,11 @@ export function ZeroJob({ networkKey, query, amount, crew }: {
             {receipt.lines.map((line, index) => (
               <div key={`${line.address}-${index}`} className="flex items-center justify-between gap-3 py-2.5">
                 <p className="truncate text-sm text-ink">{line.address}</p>
-                <span className={`tabular shrink-0 font-semibold ${line.ok ? "text-mint" : "text-danger"}`}>
+                <span
+                  className={`tabular shrink-0 rounded-full px-3 py-1 text-sm font-bold ring-1 ${
+                    line.ok ? "bg-mint-soft text-mint ring-mint/10" : "bg-danger-soft text-danger ring-danger/10"
+                  }`}
+                >
                   ${formatUsdFixed(line.received)}
                 </span>
               </div>
@@ -366,9 +420,21 @@ export function ZeroJob({ networkKey, query, amount, crew }: {
                 wallet that will pay, then come back and pay in one tap.
               </p>
             ) : (
-              <Button variant="pay" full disabled={Boolean(busy) || Boolean(amountError)} onClick={pay}>
-                {busy === "pay" ? "Paying…" : `Pay $${formatUsdFixed(payNow)}`}
-              </Button>
+              <>
+                <div className="flex items-baseline justify-between rounded-2xl bg-[#f5f7fc] px-4 py-3 ring-1 ring-black/[0.03]">
+                  <span className="text-xs font-bold uppercase tracking-wide text-muted">You pay</span>
+                  <span className="tabular text-2xl font-black leading-none text-ink">${formatUsdFixed(payNow)}</span>
+                </div>
+                <Button
+                  variant="pay"
+                  full
+                  disabled={Boolean(busy) || Boolean(amountError)}
+                  onClick={pay}
+                  className="mt-2 h-14 rounded-2xl text-base"
+                >
+                  {busy === "pay" ? "Paying…" : `Pay $${formatUsdFixed(payNow)}`}
+                </Button>
+              </>
             )}
           </div>
           {stage ? <div className="pt-3"><Spinner label={stage} /></div> : null}

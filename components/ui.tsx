@@ -22,7 +22,9 @@ export function Card({
     none: "",
   };
   return (
-    <section className={`rounded-[16px] bg-white p-4 shadow-[0_10px_30px_-18px_rgba(16,24,40,0.45)] ${edges[edge ?? "none"]} ${className}`}>
+    <section
+      className={`rounded-[20px] bg-white p-4 shadow-[0_18px_42px_-26px_rgba(16,24,40,0.6)] ring-1 ring-white/60 ${edges[edge ?? "none"]} ${className}`}
+    >
       {children}
     </section>
   );
